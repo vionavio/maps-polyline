@@ -1,23 +1,33 @@
 package com.viona.mapspolyline
 
+import android.Manifest
+import android.annotation.SuppressLint
+import android.content.Intent
 import android.graphics.Color
-import androidx.appcompat.app.AppCompatActivity
+import android.location.Location
 import android.os.Bundle
-
+import androidx.appcompat.app.AppCompatActivity
 import com.google.android.gms.maps.CameraUpdateFactory
 import com.google.android.gms.maps.GoogleMap
 import com.google.android.gms.maps.OnMapReadyCallback
 import com.google.android.gms.maps.SupportMapFragment
 import com.google.android.gms.maps.model.LatLng
-import com.google.android.gms.maps.model.MarkerOptions
 import com.google.android.gms.maps.model.PolylineOptions
-import com.google.maps.android.PolyUtil
 import com.viona.mapspolyline.databinding.ActivityMapsBinding
+import com.viona.mapspolyline.manager.LocationManager
+import kotlinx.coroutines.MainScope
+import kotlinx.coroutines.flow.FlowCollector
+import kotlinx.coroutines.launch
+import pub.devrel.easypermissions.AfterPermissionGranted
+import pub.devrel.easypermissions.EasyPermissions
 
 class MapsActivity : AppCompatActivity(), OnMapReadyCallback {
 
     private lateinit var mMap: GoogleMap
     private lateinit var binding: ActivityMapsBinding
+    private val locationManager: LocationManager by lazy {
+        LocationManager(this)
+    }
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -31,22 +41,10 @@ class MapsActivity : AppCompatActivity(), OnMapReadyCallback {
         mapFragment.getMapAsync(this)
     }
 
-    /**
-     * Manipulates the map once available.
-     * This callback is triggered when the map is ready to be used.
-     * This is where we can add markers or lines, add listeners or move the camera. In this case,
-     * we just add a marker near Sydney, Australia.
-     * If Google Play services is not installed on the device, the user will be prompted to install
-     * it inside the SupportMapFragment. This method will only be triggered once the user has
-     * installed Google Play services and returned to the app.
-     */
     override fun onMapReady(googleMap: GoogleMap) {
         mMap = googleMap
-
-        // Add a marker in Sydney and move the camera
-//        val sydney = LatLng(-34.0, 151.0)
-//        mMap.addMarker(MarkerOptions().position(sydney).title("Marker in Sydney"))
-//        mMap.moveCamera(CameraUpdateFactory.newLatLng(sydney))
+        mMap.uiSettings.isCompassEnabled = true
+        mMap.uiSettings.isZoomControlsEnabled = true
 
         val routes = Sources.getResultRoutes()
         val coordinate = routes.data?.route.orEmpty()
@@ -55,15 +53,70 @@ class MapsActivity : AppCompatActivity(), OnMapReadyCallback {
             }
 
         val point1 = coordinate.firstOrNull()
-        mMap.moveCamera(CameraUpdateFactory.newLatLngZoom(point1!!, 14f))
+        point1?.let {
+            mMap.moveCamera(CameraUpdateFactory.newLatLngZoom(it, 14f))
+        }
 
         val polyline = PolylineOptions()
             .addAll(coordinate)
-            .width(4f)
-            .color(Color.GREEN)
+            .width(6f)
+            .color(Color.RED)
         mMap.addPolyline(polyline)
 
+        getLocationWithPermission()
 
+        binding.tvResultCoordinate.setOnClickListener {
+            Intent(this, UserActivity::class.java).also {
+                startActivity(it)
+            }
+        }
+    }
 
+    override fun onRequestPermissionsResult(
+        requestCode: Int,
+        permissions: Array<out String>,
+        grantResults: IntArray
+    ) {
+        super.onRequestPermissionsResult(requestCode, permissions, grantResults)
+        EasyPermissions.onRequestPermissionsResult(requestCode, permissions, grantResults, this)
+    }
+
+    @AfterPermissionGranted(value = RC_LOCATION)
+    private fun getLocationWithPermission() {
+        val fineLocation = Manifest.permission.ACCESS_FINE_LOCATION
+        val coarseLocation = Manifest.permission.ACCESS_COARSE_LOCATION
+
+        if (EasyPermissions.hasPermissions(this, fineLocation, coarseLocation)) {
+            //get location
+            getLocation()
+        } else {
+            EasyPermissions.requestPermissions(
+                this,
+                "Granted for location",
+                RC_LOCATION,
+                fineLocation,
+                coarseLocation
+            )
+        }
+    }
+
+    @SuppressLint("MissingPermission")
+    private fun getLocation() {
+        MainScope().launch {
+            locationManager.getLocationFlow().collect(onLocationResult())
+        }
+    }
+
+    @SuppressLint("SetTextI18n")
+    private fun onLocationResult() = FlowCollector<Location> { location ->
+        binding.tvResultCoordinate.text = "${location.latitude}, ${location.longitude}"
+        println("---------LOCATION UPDATE -> ${location.latitude}, ${location.longitude}")
+
+        val newLatLng = LatLng(location.latitude, location.longitude)
+        mMap.animateCamera(CameraUpdateFactory.newLatLng(newLatLng))
+    }
+
+    companion object {
+        const val RC_LOCATION = 16
     }
 }
