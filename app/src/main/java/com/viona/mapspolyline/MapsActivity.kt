@@ -2,16 +2,18 @@ package com.viona.mapspolyline
 
 import android.Manifest
 import android.annotation.SuppressLint
-import android.content.Intent
 import android.graphics.Color
 import android.location.Location
 import android.os.Bundle
+import android.widget.Toast
 import androidx.appcompat.app.AppCompatActivity
 import com.google.android.gms.maps.CameraUpdateFactory
 import com.google.android.gms.maps.GoogleMap
 import com.google.android.gms.maps.OnMapReadyCallback
 import com.google.android.gms.maps.SupportMapFragment
 import com.google.android.gms.maps.model.LatLng
+import com.google.android.gms.maps.model.Marker
+import com.google.android.gms.maps.model.MarkerOptions
 import com.google.android.gms.maps.model.PolylineOptions
 import com.viona.mapspolyline.databinding.ActivityMapsBinding
 import com.viona.mapspolyline.manager.LocationManager
@@ -28,6 +30,8 @@ class MapsActivity : AppCompatActivity(), OnMapReadyCallback {
     private val locationManager: LocationManager by lazy {
         LocationManager(this)
     }
+
+    private var marker: Marker? = null
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -65,10 +69,15 @@ class MapsActivity : AppCompatActivity(), OnMapReadyCallback {
 
         getLocationWithPermission()
 
-        binding.tvResultCoordinate.setOnClickListener {
-            Intent(this, UserActivity::class.java).also {
-                startActivity(it)
+        binding.tvResultCoordinate.setOnClickListener { it ->
+//            Intent(this, UserActivity::class.java).also {
+//                startActivity(it)
+//            }'
+            locationManager.getLastLocation{
+                Toast.makeText(this, it.toLatLng().toString(), Toast.LENGTH_SHORT).show()
             }
+
+
         }
     }
 
@@ -114,6 +123,16 @@ class MapsActivity : AppCompatActivity(), OnMapReadyCallback {
 
         val newLatLng = LatLng(location.latitude, location.longitude)
         mMap.animateCamera(CameraUpdateFactory.newLatLng(newLatLng))
+
+        if (marker == null) {
+            val markerOption = MarkerOptions()
+                .position(newLatLng)
+            marker = mMap.addMarker(markerOption)
+        } else {
+            marker?.position = newLatLng
+        }
+
+        marker?.moveSmoothly(newLatLng)
     }
 
     companion object {

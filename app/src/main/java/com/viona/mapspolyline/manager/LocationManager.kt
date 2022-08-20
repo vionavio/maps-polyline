@@ -53,4 +53,18 @@ class LocationManager(private val context: Context) {
             old.distanceTo(new) < distanceValidator
         }
     }
+
+    @SuppressLint("MissingPermission")
+    fun getLastLocation(lastLocation: (Location) -> Unit) {
+        val locationRequest = LastLocationRequest.Builder()
+            .build()
+
+        fusedLocationProvider.getLastLocation(locationRequest)
+            .addOnFailureListener {
+                it.printStackTrace()
+            }
+            .addOnSuccessListener {
+                lastLocation.invoke(it)
+            }
+    }
 }
