@@ -1,4 +1,4 @@
-package com.viona.mapspolyline
+package com.viona.mapspolyline.utils
 
 import android.animation.ValueAnimator
 import android.location.Location

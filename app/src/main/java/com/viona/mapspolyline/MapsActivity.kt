@@ -17,6 +17,8 @@ import com.google.android.gms.maps.model.MarkerOptions
 import com.google.android.gms.maps.model.PolylineOptions
 import com.viona.mapspolyline.databinding.ActivityMapsBinding
 import com.viona.mapspolyline.manager.LocationManager
+import com.viona.mapspolyline.utils.moveSmoothly
+import com.viona.mapspolyline.utils.toLatLng
 import kotlinx.coroutines.MainScope
 import kotlinx.coroutines.flow.FlowCollector
 import kotlinx.coroutines.launch
